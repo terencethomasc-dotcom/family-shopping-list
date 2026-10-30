@@ -90,7 +90,7 @@
         <div><p class="lbl">Rate per unit</p><input type="number" id="rate" min="0" step="any" placeholder="0.00"></div>
         <div><p class="lbl">Estimate</p><input type="number" id="est" min="0" step="any" placeholder="0.00"></div>
       </div>
-      <p id="hint" class="small" style="margin:-2px 0 8px">Estimate fills from quantity x rate. You can also type it yourself.</p>
+      <p id="hint" class="small" style="margin:-2px 0 8px">Quantity, rate and estimate are all optional. Estimate fills from quantity x rate, or type it yourself.</p>
       <p class="lbl">Add to</p>
       <select id="list">
         <option value="urgent">Urgent</option>
@@ -123,6 +123,8 @@ const LISTS = [
   ["p2", "Planned grocery shopping 2", true]
 ];
 const KEYS = LISTS.map(l => l[0]);
+const HINT_AUTO = "Quantity, rate and estimate are all optional. Estimate fills from quantity x rate, or type it yourself.";
+const HINT_MANUAL = "Estimate entered manually. Clear it to switch back to quantity x rate.";
 
 let user = null, items = [], dates = {}, manual = false, dragId = null, realtimeOn = false, editingName = false;
 
@@ -217,7 +219,8 @@ async function loadAll() {
 }
 
 function rowHtml(i) {
-  const sub = (i.quantity != null && i.rate != null) ? i.quantity + " x " + money(i.rate) : "";
+  let sub = "";
+  if (i.rate != null) sub = (i.quantity != null ? i.quantity : 1) + " x " + money(Number(i.rate));
   return '<div class="row ' + (i.done ? "done" : "") + '">' +
     '<span class="grip" data-id="' + i.id + '" aria-label="Drag to move">⋮⋮</span>' +
     '<input type="checkbox" data-act="toggle" data-id="' + i.id + '" ' + (i.done ? "checked" : "") + '>' +
@@ -256,17 +259,15 @@ function autoEst() {
   if (manual) return;
   const r = parseFloat($("rate").value);
   let q = parseFloat($("qty").value);
-  if (isNaN(r)) return;
-  if (isNaN(q)) q = 1;
+  if (isNaN(r)) { $("est").value = ""; return; }   // rate cleared: clear the auto-filled estimate
+  if (isNaN(q)) q = 1;                              // no quantity: assume 1
   $("est").value = (Math.round(q * r * 100) / 100).toFixed(2);
 }
 $("qty").oninput = autoEst;
 $("rate").oninput = autoEst;
 $("est").oninput = () => {
   manual = $("est").value !== "";
-  $("hint").textContent = manual
-    ? "Estimate entered manually. Clear it to switch back to quantity x rate."
-    : "Estimate fills from quantity x rate. You can also type it yourself.";
+  $("hint").textContent = manual ? HINT_MANUAL : HINT_AUTO;
   if (!manual) autoEst();
 };
 $("name").oninput = () => { $("err").hidden = true; };
@@ -285,7 +286,8 @@ $("add").onclick = async () => {
   });
   if (error) { status("Could not add: " + error.message); return; }
   $("name").value = ""; $("qty").value = ""; $("rate").value = ""; $("est").value = "";
-  manual = false; $("est").oninput();
+  manual = false;
+  $("hint").textContent = HINT_AUTO;
   loadAll();
 };
 $("name").addEventListener("keydown", e => { if (e.key === "Enter") $("add").click(); });
