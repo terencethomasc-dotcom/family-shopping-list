@@ -6,133 +6,362 @@
 <title>Family Shopping List</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <style>
-  :root { --bg:#f6f7f9; --card:#fff; --text:#1c1c1e; --muted:#6b7280; --line:#e5e7eb; --accent:#16a34a; --urgent:#dc2626; }
+  :root { --bg:#f6f7f9; --card:#fff; --text:#1c1c1e; --muted:#6b7280; --line:#e5e7eb; --accent:#16a34a; --urgent:#dc2626; --tint:#eaf6ee; --over:#e8f1ff; }
   @media (prefers-color-scheme: dark) {
-    :root { --bg:#111214; --card:#1c1d20; --text:#f2f2f3; --muted:#9ca3af; --line:#2c2e33; }
+    :root { --bg:#111214; --card:#1c1d20; --text:#f2f2f3; --muted:#9ca3af; --line:#2c2e33; --tint:#17261c; --over:#16243a; }
   }
   * { box-sizing: border-box; }
+  [hidden] { display:none !important; }
   body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:var(--bg); color:var(--text); }
-  .wrap { max-width:640px; margin:0 auto; padding:16px; }
-  h1 { font-size:24px; margin:8px 0 12px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:14px; }
-  input[type=text], select { width:100%; padding:12px; font-size:16px; border:1px solid var(--line); border-radius:10px; background:var(--bg); color:var(--text); margin-bottom:10px; }
-  .row { display:flex; gap:8px; }
-  .row > * { flex:1; }
+  #root { max-width:640px; margin:0 auto; padding:16px; }
+  h1 { font-size:24px; margin:8px 0 4px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; }
+  input[type=text], input[type=email], input[type=number], input[type=date], select { width:100%; padding:12px; font-size:16px; border:1px solid var(--line); border-radius:10px; background:var(--bg); color:var(--text); margin-bottom:8px; }
   button { font-size:16px; padding:12px; border:0; border-radius:10px; background:var(--accent); color:#fff; font-weight:600; cursor:pointer; }
-  .toggle { display:flex; gap:8px; margin-bottom:10px; }
-  .toggle button { background:var(--bg); color:var(--text); border:1px solid var(--line); flex:1; }
-  .toggle button.on-urgent { background:var(--urgent); color:#fff; border-color:var(--urgent); }
-  .toggle button.on-normal { background:var(--accent); color:#fff; border-color:var(--accent); }
-  h2 { font-size:14px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:18px 0 8px; }
-  h2.urgent { color:var(--urgent); }
-  .item { display:flex; align-items:center; gap:12px; padding:12px; background:var(--card); border:1px solid var(--line); border-radius:12px; margin-bottom:8px; }
-  .item input { width:22px; height:22px; flex:none; }
-  .item .name { flex:1; font-size:17px; }
-  .item.done .name { text-decoration:line-through; color:var(--muted); }
-  .item small { display:block; color:var(--muted); font-size:12px; }
-  .del { background:none; color:var(--muted); padding:6px 10px; font-size:20px; }
-  .clear { background:var(--bg); color:var(--muted); border:1px solid var(--line); width:100%; margin-top:10px; }
-  .empty { color:var(--muted); text-align:center; padding:30px 0; }
-  .who { font-size:14px; color:var(--muted); margin-bottom:6px; }
+  .lbl { font-size:12px; color:var(--muted); margin:0 0 4px; }
+  .three { display:flex; gap:8px; }
+  .three > div { flex:1; min-width:0; }
+  .small { font-size:12px; color:var(--muted); }
+  .top { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .link { background:none; color:var(--muted); padding:6px 4px; font-size:14px; font-weight:400; text-decoration:underline; }
+  .grand { display:flex; justify-content:space-between; align-items:center; margin:14px 4px 0; }
+  .grand b { font-size:20px; }
+  .sec { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:10px 12px; margin-top:12px; }
+  .sec.over { border:2px solid #3b82f6; padding:9px 11px; background:var(--over); }
+  .hd { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .hd h3 { margin:0; font-size:16px; }
+  .hd h3.urg { color:var(--urgent); }
+  .tot { font-size:13px; font-weight:600; background:var(--tint); color:var(--accent); padding:3px 10px; border-radius:8px; white-space:nowrap; }
+  .au { display:flex; justify-content:space-between; align-items:baseline; margin-top:12px; padding-bottom:2px; }
+  .au .who { font-size:12px; font-weight:600; color:var(--muted); }
+  .au .sub { font-size:12px; font-style:italic; color:var(--muted); opacity:.8; }
+  .row { display:flex; align-items:center; gap:8px; padding:8px 0; border-top:1px solid var(--line); }
+  .row.drag { opacity:.35; }
+  .grip { touch-action:none; cursor:grab; color:var(--muted); font-size:20px; padding:6px 4px; user-select:none; -webkit-user-select:none; flex:none; }
+  .row input[type=checkbox] { width:22px; height:22px; flex:none; }
+  .nm { flex:1; min-width:0; font-size:17px; }
+  .nm small { display:block; font-size:12px; color:var(--muted); }
+  .done .nm span { text-decoration:line-through; color:var(--muted); }
+  .amt { font-size:15px; font-weight:600; min-width:54px; text-align:right; }
+  .del { background:none; color:var(--muted); padding:4px 8px; font-size:22px; font-weight:400; }
+  .none { color:var(--muted); font-size:14px; margin:8px 0 2px; }
+  .clear { background:var(--card); color:var(--muted); border:1px solid var(--line); width:100%; margin-top:14px; }
+  #status { color:var(--urgent); font-size:14px; margin:8px 4px 0; }
+  #ghost { position:fixed; display:none; pointer-events:none; z-index:50; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:8px 12px; font-size:15px; font-weight:600; max-width:240px; }
 </style>
 </head>
 <body>
-<div class="wrap">
+<div id="root">
   <h1>🛒 Family Shopping List</h1>
 
-  <div class="card">
-    <div class="who">Your name</div>
-    <input type="text" id="who" placeholder="e.g. Mum">
-    <input type="text" id="name" placeholder="Add an item…">
-    <div class="toggle">
-      <button id="btnNormal" class="on-normal" type="button">Not urgent</button>
-      <button id="btnUrgent" type="button">🔥 Urgent</button>
+  <div id="loginView" hidden>
+    <div class="card" style="margin-top:12px">
+      <p style="margin:0 0 10px">Sign in with your email. We'll send you a link, and you'll stay signed in on this device.</p>
+      <input type="email" id="email" placeholder="you@example.com" autocomplete="email">
+      <button id="send" style="width:100%">Send sign-in link</button>
+      <p id="loginMsg" class="small" style="margin:10px 0 0"></p>
     </div>
-    <select id="freq">
-      <option value="once">One-off</option>
-      <option value="weekly">Weekly</option>
-      <option value="monthly">Monthly</option>
-    </select>
-    <button id="add" type="button" style="width:100%">Add to list</button>
   </div>
 
-  <div id="list"></div>
-  <button class="clear" id="clearDone" type="button">Clear ticked items</button>
+  <div id="nameView" hidden>
+    <div class="card" style="margin-top:12px">
+      <p style="margin:0 0 10px">What should we call you? This name shows next to the items you add.</p>
+      <input type="text" id="nameInput" placeholder="e.g. Terence" maxlength="30" autocomplete="given-name">
+      <button id="saveName" style="width:100%">Save name</button>
+      <button class="link" id="cancelName" style="width:100%" hidden>Cancel</button>
+      <p id="nameMsg" class="small" style="margin:10px 0 0"></p>
+    </div>
+  </div>
+
+  <div id="appView" hidden>
+    <div class="top">
+      <span class="small" id="who"></span>
+      <span>
+        <button class="link" id="changeName">Change name</button>
+        <button class="link" id="signout">Sign out</button>
+      </span>
+    </div>
+
+    <div class="card" style="margin-top:8px">
+      <p class="lbl">Item</p>
+      <input type="text" id="name" placeholder="Basmati rice">
+      <div class="three">
+        <div><p class="lbl">Quantity</p><input type="number" id="qty" min="0" step="any" placeholder="1"></div>
+        <div><p class="lbl">Rate per unit</p><input type="number" id="rate" min="0" step="any" placeholder="0.00"></div>
+        <div><p class="lbl">Estimate</p><input type="number" id="est" min="0" step="any" placeholder="0.00"></div>
+      </div>
+      <p id="hint" class="small" style="margin:-2px 0 8px">Estimate fills from quantity x rate. You can also type it yourself.</p>
+      <p class="lbl">Add to</p>
+      <select id="list">
+        <option value="urgent">Urgent</option>
+        <option value="p1">Planned grocery shopping 1</option>
+        <option value="p2">Planned grocery shopping 2</option>
+      </select>
+      <button id="add" style="width:100%">Add to list</button>
+      <p id="err" class="small" style="color:var(--urgent);margin:6px 0 0" hidden>Enter an item name first</p>
+    </div>
+
+    <div class="grand"><span class="small" style="font-size:14px">Grand total, all lists</span><b id="grand">0.00</b></div>
+    <p class="small" style="margin:6px 4px 0">Press and hold the grip icon on an item, then drag it to another list.</p>
+    <div id="status"></div>
+
+    <div id="lists"></div>
+    <button class="clear" id="clearDone">Clear ticked items</button>
+  </div>
 </div>
+<div id="ghost"></div>
 
 <script>
 const SUPABASE_URL = "https://umwpcfvxwvosbizfgtlj.supabase.co";
 const SUPABASE_KEY = "sb_publishable_2u49IxVwhpd15LBkM_0_iw_9fQsKc5-";
-const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const CURRENCY = "";   // put a symbol here if you like, e.g. "£" or "$" or "₹"
 
-let items = [];
-let urgent = false;
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const LISTS = [
+  ["urgent", "Urgent", false],
+  ["p1", "Planned grocery shopping 1", true],
+  ["p2", "Planned grocery shopping 2", true]
+];
+const KEYS = LISTS.map(l => l[0]);
+
+let user = null, items = [], dates = {}, manual = false, dragId = null, realtimeOn = false, editingName = false;
 
 const $ = id => document.getElementById(id);
-try { $("who").value = localStorage.getItem("who") || ""; } catch (e) {}
-$("who").addEventListener("input", () => { try { localStorage.setItem("who", $("who").value); } catch (e) {} });
+const esc = s => { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; };
+const money = n => CURRENCY + (Math.round(n * 100) / 100).toFixed(2);
+const nameOf = email => { if (!email) return ""; const p = email.split("@")[0]; return p.charAt(0).toUpperCase() + p.slice(1); };
+const displayName = () => (user && user.user_metadata && user.user_metadata.name) ? user.user_metadata.name : "";
+const status = msg => { $("status").textContent = msg || ""; };
+const listOf = i => KEYS.includes(i.list) ? i.list : "p1";
+const authorOf = i => i.added_by || nameOf(i.added_by_email) || "Unknown";
+const sum = rows => rows.reduce((s, i) => s + (Number(i.estimate) || 0), 0);
 
-$("btnNormal").onclick = () => setUrgent(false);
-$("btnUrgent").onclick = () => setUrgent(true);
-function setUrgent(v) {
-  urgent = v;
-  $("btnNormal").className = v ? "" : "on-normal";
-  $("btnUrgent").className = v ? "on-urgent" : "";
+/* ---------- sign in ---------- */
+$("send").onclick = async () => {
+  const email = $("email").value.trim();
+  if (!email) { $("loginMsg").textContent = "Enter your email first."; return; }
+  $("loginMsg").textContent = "Sending…";
+  const { error } = await db.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: location.origin + location.pathname, shouldCreateUser: false }
+  });
+  if (error) {
+    const m = error.message || "";
+    $("loginMsg").textContent = /signup|not allowed|not found/i.test(m)
+      ? "That email isn't on the family list. Ask to be added."
+      : "Couldn't send the link: " + m;
+  } else {
+    $("loginMsg").textContent = "Check your email and tap the link. You can close this page.";
+  }
+};
+$("signout").onclick = async () => { editingName = false; await db.auth.signOut(); };
+
+db.auth.onAuthStateChange((event, session) => {
+  user = session ? session.user : null;
+  setTimeout(showView, 0);
+});
+
+/* ---------- name ---------- */
+$("saveName").onclick = async () => {
+  const n = $("nameInput").value.trim();
+  if (!n) { $("nameMsg").textContent = "Enter your name first."; return; }
+  $("nameMsg").textContent = "Saving…";
+  const { data, error } = await db.auth.updateUser({ data: { name: n } });
+  if (error) { $("nameMsg").textContent = "Couldn't save: " + error.message; return; }
+  user = data.user;
+  editingName = false;
+  $("nameMsg").textContent = "";
+  showView();
+};
+$("nameInput").addEventListener("keydown", e => { if (e.key === "Enter") $("saveName").click(); });
+$("changeName").onclick = () => {
+  editingName = true;
+  $("nameInput").value = displayName();
+  showView();
+};
+$("cancelName").onclick = () => { editingName = false; showView(); };
+
+function showView() {
+  const name = displayName();
+  $("loginView").hidden = !!user;
+  $("nameView").hidden = !(user && (!name || editingName));
+  $("appView").hidden = !(user && name && !editingName);
+  $("cancelName").hidden = !name;
+  if (user && name && !editingName) {
+    $("who").textContent = "Signed in as " + name;
+    loadAll();
+    subscribe();
+  }
 }
 
-async function load() {
-  const { data, error } = await db.from("items").select("*").order("created_at", { ascending: true });
-  if (error) { $("list").innerHTML = '<div class="empty">Could not load: ' + error.message + '</div>'; return; }
-  items = data;
+function subscribe() {
+  if (realtimeOn) return;
+  realtimeOn = true;
+  db.channel("family-changes")
+    .on("postgres_changes", { event: "*", schema: "public", table: "items" }, loadAll)
+    .on("postgres_changes", { event: "*", schema: "public", table: "list_dates" }, loadAll)
+    .subscribe();
+}
+
+/* ---------- load and show ---------- */
+async function loadAll() {
+  if (dragId !== null) return;
+  const a = await db.from("items").select("*").order("created_at", { ascending: true });
+  const b = await db.from("list_dates").select("*");
+  if (a.error) { status("Could not load: " + a.error.message); return; }
+  items = a.data;
+  dates = {};
+  (b.data || []).forEach(r => { dates[r.list] = r.shopping_date || ""; });
+  status("");
   render();
 }
 
-function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
-
-function itemHtml(i) {
-  const meta = [i.frequency !== "once" ? i.frequency : "", i.added_by ? "by " + i.added_by : ""].filter(Boolean).join(" · ");
-  return '<div class="item ' + (i.done ? "done" : "") + '">' +
-    '<input type="checkbox" ' + (i.done ? "checked" : "") + ' onchange="toggle(\'' + i.id + '\', this.checked)">' +
-    '<div class="name">' + esc(i.name) + (meta ? "<small>" + esc(meta) + "</small>" : "") + '</div>' +
-    '<button class="del" onclick="removeItem(\'' + i.id + '\')">×</button></div>';
+function rowHtml(i) {
+  const sub = (i.quantity != null && i.rate != null) ? i.quantity + " x " + money(i.rate) : "";
+  return '<div class="row ' + (i.done ? "done" : "") + '">' +
+    '<span class="grip" data-id="' + i.id + '" aria-label="Drag to move">⋮⋮</span>' +
+    '<input type="checkbox" data-act="toggle" data-id="' + i.id + '" ' + (i.done ? "checked" : "") + '>' +
+    '<div class="nm"><span>' + esc(i.name) + '</span>' + (sub ? "<small>" + esc(sub) + "</small>" : "") + '</div>' +
+    '<span class="amt">' + (i.estimate != null ? money(Number(i.estimate)) : "-") + '</span>' +
+    '<button class="del" data-act="del" data-id="' + i.id + '" aria-label="Delete">×</button></div>';
 }
 
 function render() {
-  if (!items.length) { $("list").innerHTML = '<div class="empty">Your list is empty 🎉</div>'; return; }
-  const groups = [
-    ["🔥 Urgent", "urgent", i => i.urgent],
-    ["Weekly", "", i => !i.urgent && i.frequency === "weekly"],
-    ["Monthly", "", i => !i.urgent && i.frequency === "monthly"],
-    ["Other", "", i => !i.urgent && i.frequency === "once"],
-  ];
-  $("list").innerHTML = groups.map(([title, cls, f]) => {
-    const g = items.filter(f);
-    return g.length ? '<h2 class="' + cls + '">' + title + '</h2>' + g.map(itemHtml).join("") : "";
-  }).join("");
+  let grand = 0, html = "";
+  LISTS.forEach(([k, title, planned]) => {
+    const rows = items.filter(i => listOf(i) === k);
+    const total = sum(rows);
+    grand += total;
+    html += '<div class="sec" data-list="' + k + '"><div class="hd"><h3 class="' + (k === "urgent" ? "urg" : "") + '">' + title + '</h3><span class="tot">Total ' + money(total) + '</span></div>';
+    if (planned) {
+      html += '<div style="margin-top:8px"><p class="lbl">Shopping date</p><input type="date" data-act="date" data-list-key="' + k + '" value="' + (dates[k] || "") + '" style="margin:0"></div>';
+    }
+    if (!rows.length) html += '<p class="none">No items yet. Drag one here.</p>';
+    const order = [];
+    rows.forEach(i => { const a = authorOf(i); if (!order.includes(a)) order.push(a); });
+    order.forEach(a => {
+      const mine = rows.filter(i => authorOf(i) === a);
+      const s = sum(mine);
+      html += '<div class="au"><span class="who">' + esc(a) + '</span>' + (s > 0 ? '<span class="sub">subtotal ' + money(s) + '</span>' : "") + '</div>';
+      mine.forEach(i => { html += rowHtml(i); });
+    });
+    html += "</div>";
+  });
+  $("lists").innerHTML = html;
+  $("grand").textContent = money(grand);
 }
+
+/* ---------- add item ---------- */
+function autoEst() {
+  if (manual) return;
+  const r = parseFloat($("rate").value);
+  let q = parseFloat($("qty").value);
+  if (isNaN(r)) return;
+  if (isNaN(q)) q = 1;
+  $("est").value = (Math.round(q * r * 100) / 100).toFixed(2);
+}
+$("qty").oninput = autoEst;
+$("rate").oninput = autoEst;
+$("est").oninput = () => {
+  manual = $("est").value !== "";
+  $("hint").textContent = manual
+    ? "Estimate entered manually. Clear it to switch back to quantity x rate."
+    : "Estimate fills from quantity x rate. You can also type it yourself.";
+  if (!manual) autoEst();
+};
+$("name").oninput = () => { $("err").hidden = true; };
 
 $("add").onclick = async () => {
   const name = $("name").value.trim();
-  if (!name) return;
+  if (!name) { $("err").hidden = false; return; }
+  const q = parseFloat($("qty").value), r = parseFloat($("rate").value), e = parseFloat($("est").value);
+  const list = $("list").value;
   const { error } = await db.from("items").insert({
-    name, urgent, frequency: $("freq").value, added_by: $("who").value.trim() || null
+    name, list, urgent: list === "urgent",
+    quantity: isNaN(q) ? null : q,
+    rate: isNaN(r) ? null : r,
+    estimate: isNaN(e) ? null : e,
+    added_by: displayName()
   });
-  if (error) { alert("Could not add: " + error.message); return; }
-  $("name").value = "";
-  setUrgent(false);
-  load();
+  if (error) { status("Could not add: " + error.message); return; }
+  $("name").value = ""; $("qty").value = ""; $("rate").value = ""; $("est").value = "";
+  manual = false; $("est").oninput();
+  loadAll();
 };
 $("name").addEventListener("keydown", e => { if (e.key === "Enter") $("add").click(); });
 
-window.toggle = async (id, done) => { await db.from("items").update({ done }).eq("id", id); load(); };
-window.removeItem = async id => { await db.from("items").delete().eq("id", id); load(); };
-$("clearDone").onclick = async () => { await db.from("items").delete().eq("done", true); load(); };
+/* ---------- tick, delete, dates ---------- */
+$("lists").addEventListener("change", async e => {
+  const t = e.target, act = t.dataset.act;
+  if (act === "toggle") {
+    const { error } = await db.from("items").update({ done: t.checked }).eq("id", t.dataset.id);
+    if (error) status("Could not update: " + error.message);
+    loadAll();
+  }
+  if (act === "date") {
+    const { error } = await db.from("list_dates").upsert({ list: t.dataset.listKey, shopping_date: t.value || null });
+    if (error) status("Could not save date: " + error.message);
+    else dates[t.dataset.listKey] = t.value;
+  }
+});
+$("lists").addEventListener("click", async e => {
+  const t = e.target.closest("[data-act='del']");
+  if (!t) return;
+  const { error } = await db.from("items").delete().eq("id", t.dataset.id);
+  if (error) status("Could not delete: " + error.message);
+  loadAll();
+});
+$("clearDone").onclick = async () => {
+  if (!confirm("Remove all ticked items?")) return;
+  const { error } = await db.from("items").delete().eq("done", true);
+  if (error) status("Could not clear: " + error.message);
+  loadAll();
+};
 
-db.channel("items-changes")
-  .on("postgres_changes", { event: "*", schema: "public", table: "items" }, load)
-  .subscribe();
-
-load();
+/* ---------- drag and drop ---------- */
+function listAt(x, y) {
+  const el = document.elementFromPoint(x, y);
+  const s = el && el.closest ? el.closest("[data-list]") : null;
+  return s ? s.dataset.list : null;
+}
+function markOver(k) {
+  document.querySelectorAll(".sec").forEach(s => s.classList.toggle("over", s.dataset.list === k));
+}
+function moveGhost(e) {
+  const g = $("ghost");
+  g.style.left = (e.clientX - 20) + "px";
+  g.style.top = (e.clientY - 48) + "px";
+}
+$("lists").addEventListener("pointerdown", e => {
+  const g = e.target.closest(".grip");
+  if (!g) return;
+  e.preventDefault();
+  const id = g.dataset.id;
+  const it = items.find(i => String(i.id) === String(id));
+  if (!it) return;
+  dragId = id;
+  $("ghost").textContent = it.name;
+  $("ghost").style.display = "block";
+  moveGhost(e);
+  const row = g.closest(".row");
+  if (row) row.classList.add("drag");
+  try { g.setPointerCapture(e.pointerId); } catch (err) {}
+  g.onpointermove = ev => { moveGhost(ev); markOver(listAt(ev.clientX, ev.clientY)); };
+  g.onpointerup = async ev => {
+    const k = listAt(ev.clientX, ev.clientY);
+    $("ghost").style.display = "none";
+    markOver(null);
+    dragId = null;
+    if (k && k !== listOf(it)) {
+      it.list = k;
+      render();
+      const { error } = await db.from("items").update({ list: k, urgent: k === "urgent" }).eq("id", id);
+      if (error) status("Could not move: " + error.message);
+    }
+    loadAll();
+  };
+  g.onpointercancel = () => { $("ghost").style.display = "none"; markOver(null); dragId = null; loadAll(); };
+});
 </script>
 </body>
 </html>
